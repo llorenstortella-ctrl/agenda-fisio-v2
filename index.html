@@ -254,6 +254,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
 .empty{text-align:center;padding:40px 20px;color:var(--muted)}
 .empty-icon{font-size:40px;margin-bottom:12px}
 </style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
 
@@ -560,6 +561,144 @@ function openChangePIN(){
   if(!/^\d{4}$/.test(newPin)){showToast('El PIN debe ser de 4 dígitos','error');return;}
   fisioPin=newPin;
   showToast('PIN actualizado','success');
+}
+
+// ════════════════════════════════
+// SUPABASE
+// ════════════════════════════════
+const SUPABASE_URL = "https://kozyxwufvmopwjnrsoko.supabase.co";
+const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imtvenl4d3Vmdm1vcHdqbnJzb2tvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY2OTU1MDYsImV4cCI6MjA5MjI3MTUwNn0.K_oREaBN8Dz31XIjnyoLm8XRVFrtlTSUSAomhX62Fb0";
+const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+async function dbLoad() {
+  try {
+    // Cargar citas
+    const {data:apts} = await db.from('appointments').select('*');
+    if(apts) appointments = apts.map(r=>({
+      id: r.id,
+      name: r.patient,
+      phone: r.phone||'',
+      email: r.email||'',
+      service: r.service,
+      date: r.date,
+      time: r.time,
+      status: r.status||'confirmada',
+      notes: r.notes||''
+    }));
+
+    // Cargar configuraciones de dias
+    const {data:days} = await db.from('day_configs').select('*');
+    if(days) days.forEach(r=>{
+      dayConfigs[r.date] = {
+        franjas: r.franjas,
+        dur: r.dur
+      };
+    });
+
+    // Cargar duraciones por defecto
+    const {data:durs} = await db.from('default_durations').select('*').eq('id','global').single();
+    if(durs && !durs.error) defaultDur = {fisio:durs.fisio, nesa:durs.nesa, combinado:durs.combinado};
+
+    // Cargar pacientes
+    const {data:pats} = await db.from('patients').select('*');
+    if(pats) patients = pats.map(r=>({
+      id: r.id,
+      name: r.name,
+      phone: r.phone||'',
+      email: r.email||'',
+      service: r.service||'fisio'
+    }));
+
+    // Actualizar nextId
+    const allIds = appointments.map(a=>typeof a.id==='number'?a.id:0);
+    if(allIds.length) nextId = Math.max(...allIds)+1;
+
+  } catch(e) {
+    console.error('Error cargando datos:', e);
+  }
+}
+
+async function dbSaveAppointment(appt) {
+  try {
+    await db.from('appointments').upsert([{
+      id: appt.id,
+      patient: appt.name,
+      phone: appt.phone||'',
+      email: appt.email||'',
+      service: appt.service,
+      date: appt.date,
+      time: appt.time,
+      status: appt.status||'confirmada',
+      notes: appt.notes||''
+    }]);
+  } catch(e) { console.error('Error guardando cita:', e); }
+}
+
+async function dbDeleteAppointment(id) {
+  try {
+    await db.from('appointments').delete().eq('id', id);
+  } catch(e) { console.error('Error eliminando cita:', e); }
+}
+
+async function dbSaveDayConfig(date, config) {
+  try {
+    await db.from('day_configs').upsert([{
+      date: date,
+      franjas: config.franjas,
+      dur: config.dur
+    }]);
+  } catch(e) { console.error('Error guardando config dia:', e); }
+}
+
+async function dbDeleteDayConfig(date) {
+  try {
+    await db.from('day_configs').delete().eq('date', date);
+  } catch(e) { console.error('Error eliminando config dia:', e); }
+}
+
+async function dbSaveDefaultDur() {
+  try {
+    await db.from('default_durations').upsert([{
+      id: 'global',
+      fisio: defaultDur.fisio,
+      nesa: defaultDur.nesa,
+      combinado: defaultDur.combinado
+    }]);
+  } catch(e) { console.error('Error guardando duraciones:', e); }
+}
+
+async function dbSavePatient(patient) {
+  try {
+    await db.from('patients').upsert([{
+      id: patient.id,
+      name: patient.name,
+      phone: patient.phone||'',
+      email: patient.email||'',
+      service: patient.service||'fisio'
+    }]);
+  } catch(e) { console.error('Error guardando paciente:', e); }
+}
+
+// Realtime — actualizar citas en tiempo real
+function startRealtime() {
+  db.channel('realtime-apts')
+    .on('postgres_changes', {event:'INSERT', schema:'public', table:'appointments'}, payload=>{
+      const r=payload.new;
+      const exists=appointments.find(a=>a.id===r.id);
+      if(!exists) appointments.push({id:r.id,name:r.patient,phone:r.phone||'',email:r.email||'',service:r.service,date:r.date,time:r.time,status:r.status||'confirmada',notes:r.notes||''});
+      renderFisioCal();renderTimeline();
+    })
+    .on('postgres_changes', {event:'UPDATE', schema:'public', table:'appointments'}, payload=>{
+      const r=payload.new;
+      const idx=appointments.findIndex(a=>a.id===r.id);
+      if(idx>=0) appointments[idx]={id:r.id,name:r.patient,phone:r.phone||'',email:r.email||'',service:r.service,date:r.date,time:r.time,status:r.status||'confirmada',notes:r.notes||''};
+      renderFisioCal();renderTimeline();
+    })
+    .on('postgres_changes', {event:'DELETE', schema:'public', table:'appointments'}, payload=>{
+      appointments=appointments.filter(a=>a.id!==payload.old.id);
+      renderFisioCal();renderTimeline();
+    })
+    .subscribe();
 }
 
 // ════════════════════════════════
@@ -940,6 +1079,7 @@ function saveDayConfig(){
   }
   if(!dcFranjas.length){showToast('Añade al menos una franja','error');return;}
   dayConfigs[dcDate]={franjas:dcFranjas,dur:{...dcDur}};
+  dbSaveDayConfig(dcDate, dayConfigs[dcDate]);
   // Sync calViewDate with configured day
   currentDate=strToDate(dcDate);
   calViewDate=new Date(currentDate.getFullYear(),currentDate.getMonth(),1);
@@ -952,6 +1092,7 @@ function saveDayConfig(){
 function closeDayConfig(){
   if(!confirm('¿Cerrar este día? Se eliminarán sus franjas.'))return;
   delete dayConfigs[dcDate];
+  dbDeleteDayConfig(dcDate);
   currentDate=strToDate(dcDate);
   calViewDate=new Date(currentDate.getFullYear(),currentDate.getMonth(),1);
   closeSheet('sheet-dayconfig');
@@ -1155,7 +1296,10 @@ function confirmAppt(){
   let p=patients.find(p=>p.name.toLowerCase()===name.toLowerCase());
   if(!p){p={id:nextId++,name,phone,email:'',service:naService};patients.push(p);}
   else{if(phone)p.phone=phone;p.service=naService;}
-  appointments.push({id:nextId++,name,phone:phone||p.phone,email:p.email||'',service:naService,date:naDate,time,status:'confirmada',notes:''});
+  const newAppt={id:nextId++,name,phone:phone||p.phone,email:p.email||'',service:naService,date:naDate,time,status:'confirmada',notes:''};
+  appointments.push(newAppt);
+  dbSaveAppointment(newAppt);
+  dbSavePatient(p);
   closeSheet('sheet-newappt');renderFisioCal();renderTimeline();
   const dur=getDayDur(naDate);
   // Offer calendar save to fisio
@@ -1208,7 +1352,7 @@ function toggleArrived(){
 
 function saveAndClose(){
   const a=appointments.find(x=>x.id===editApptId);
-  if(a)a.notes=document.getElementById('dd-notes').value;
+  if(a){a.notes=document.getElementById('dd-notes').value;dbSaveAppointment(a);}
   closeSheet('sheet-apptdetail');renderFisioCal();renderTimeline();
   showToast('Guardado','success');
 }
@@ -1216,7 +1360,7 @@ function saveAndClose(){
 function cancelApptDetail(){
   if(!confirm('¿Cancelar esta cita?'))return;
   const a=appointments.find(x=>x.id===editApptId);
-  if(a){a.notes=document.getElementById('dd-notes').value;a.status='cancelada';}
+  if(a){a.notes=document.getElementById('dd-notes').value;a.status='cancelada';dbSaveAppointment(a);}
   closeSheet('sheet-apptdetail');renderFisioCal();renderTimeline();
   showToast('Cita cancelada');
 }
@@ -1296,6 +1440,7 @@ function saveDefaultDur(){
   defaultDur.fisio=parseInt(document.getElementById('set-dur-fisio').value)||50;
   defaultDur.nesa=parseInt(document.getElementById('set-dur-nesa').value)||60;
   defaultDur.combinado=parseInt(document.getElementById('set-dur-combinado').value)||90;
+  dbSaveDefaultDur();
   showToast('Duraciones por defecto guardadas','success');
 }
 
@@ -1443,7 +1588,10 @@ function confirmBooking(){
   if(!p){p={id:nextId++,name:patientName,phone:patientPhone,email:patientEmail||'',service:bookService};patients.push(p);}
   else{p.phone=patientPhone;if(patientEmail)p.email=patientEmail;p.service=bookService;}
   const dur=getDayDur(bookDate);
-  appointments.push({id:nextId++,name:patientName,phone:patientPhone,email:patientEmail||'',service:bookService,date:bookDate,time:bookSlot,status:'confirmada',notes:''});
+  const bookAppt={id:nextId++,name:patientName,phone:patientPhone,email:patientEmail||'',service:bookService,date:bookDate,time:bookSlot,status:'confirmada',notes:''};
+  appointments.push(bookAppt);
+  dbSaveAppointment(bookAppt);
+  dbSavePatient(p);
   
   // Show confirmation with calendar link
   const calLink=makeGCalLink(patientName,bookDate,bookSlot,bookService,dur[bookService]);
@@ -1502,8 +1650,16 @@ function showToast(msg,type=''){
   clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('show'),3000);
 }
 
-// Auto-redirect to patient portal
-setTimeout(()=>goPatient(), 800);
+// Auto-redirect to patient portal — cargar datos de Supabase primero
+setTimeout(async ()=>{
+  try {
+    await dbLoad();
+    startRealtime();
+  } catch(e) {
+    console.error('Error inicializando:', e);
+  }
+  goPatient();
+}, 800);
 
 setInterval(()=>{
   const today=new Date();today.setHours(0,0,0,0);
