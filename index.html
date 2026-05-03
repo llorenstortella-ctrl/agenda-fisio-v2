@@ -1,0 +1,1514 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Consulta Fisio</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+:root{
+  --bg:#0F0F0F;--surface:#1A1A1A;--surface2:#242424;--border:#2E2E2E;
+  --text:#F5F5F5;--muted:#777;
+  --fisio:#FF4D4D;--fisio-dim:rgba(255,77,77,0.15);
+  --nesa:#4D9FFF;--nesa-dim:rgba(77,159,255,0.15);
+  --combinado:#4DCC8F;--combinado-dim:rgba(77,204,143,0.15);
+  --r:14px;--r-sm:8px;
+}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden}
+.screen{display:none;min-height:100vh;flex-direction:column}
+.screen.active{display:flex}
+
+.home-hero{padding:60px 24px 36px;text-align:center}
+.home-logo{font-family:'Syne',sans-serif;font-size:36px;font-weight:800;letter-spacing:-0.02em;margin-bottom:8px}
+.home-logo span{color:var(--fisio)}
+.home-sub{color:var(--muted);font-size:14px;margin-bottom:40px}
+.home-cards{padding:0 16px 32px;display:flex;flex-direction:column;gap:12px}
+.role-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:24px;cursor:pointer;display:flex;align-items:center;gap:16px;transition:all 0.2s}
+.role-card:active{transform:scale(0.97);border-color:var(--fisio)}
+.role-icon{width:52px;height:52px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0}
+.role-info h2{font-family:'Syne',sans-serif;font-size:18px;font-weight:700;margin-bottom:4px}
+.role-info p{font-size:13px;color:var(--muted);line-height:1.4}
+
+.app-header{background:var(--surface);border-bottom:1px solid var(--border);padding:14px 20px;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:50;flex-shrink:0}
+.back-btn{width:36px;height:36px;border-radius:50%;background:var(--surface2);border:none;cursor:pointer;color:var(--text);font-size:16px;display:flex;align-items:center;justify-content:center}
+.header-title{font-family:'Syne',sans-serif;font-size:18px;font-weight:700;flex:1}
+.header-action{background:var(--fisio);border:none;border-radius:var(--r-sm);padding:8px 14px;color:#fff;font-family:'Inter',sans-serif;font-size:13px;font-weight:600;cursor:pointer}
+
+.tab-bar{background:var(--surface);border-bottom:1px solid var(--border);display:flex;overflow-x:auto;flex-shrink:0}
+.tab-bar::-webkit-scrollbar{display:none}
+.tab-btn{flex:1;min-width:65px;padding:11px 4px;border:none;background:none;color:var(--muted);font-family:'Inter',sans-serif;font-size:11px;font-weight:500;cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap;transition:all 0.15s}
+.tab-btn.active{color:var(--fisio);border-bottom-color:var(--fisio)}
+
+.scroll-content{flex:1;overflow-y:auto;padding:16px}
+.scroll-content::-webkit-scrollbar{width:3px}
+.scroll-content::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:16px;margin-bottom:12px}
+.card-title{font-family:'Syne',sans-serif;font-size:15px;font-weight:700;margin-bottom:14px}
+
+/* CALENDAR */
+.month-cal{background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0}
+.month-nav{display:flex;align-items:center;justify-content:space-between;padding:12px 16px 8px}
+.month-nav-btn{width:32px;height:32px;border-radius:50%;background:var(--surface2);border:none;color:var(--text);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.month-label{font-family:'Syne',sans-serif;font-size:16px;font-weight:700}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);padding:0 8px 10px;gap:2px}
+.cal-dow{text-align:center;font-size:9px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--muted);padding:4px 0 6px}
+.cal-day{aspect-ratio:1;display:flex;flex-direction:column;align-items:center;justify-content:center;border-radius:8px;cursor:pointer;transition:all 0.15s;position:relative}
+.cal-day:hover:not(.closed-day):not(.other-month){background:var(--surface2)}
+.cal-day.today{background:var(--fisio);color:#fff}
+.cal-day.selected{outline:2px solid var(--fisio);outline-offset:1px}
+.cal-day.today.selected{outline:2px solid rgba(255,255,255,0.5)}
+.cal-day.closed-day{opacity:0.25;cursor:not-allowed}
+.cal-day.full-day{opacity:0.5;cursor:not-allowed}
+.cal-day.other-month{opacity:0.2;pointer-events:none}
+.cal-day.has-slots{cursor:pointer}
+.cal-day-num{font-size:12px;font-weight:600;line-height:1}
+.cal-occ{position:absolute;bottom:3px;left:50%;transform:translateX(-50%);width:70%;height:3px;border-radius:2px;background:var(--border)}
+.cal-occ-fill{height:100%;border-radius:2px}
+
+/* DATE STRIP */
+.date-strip{display:flex;align-items:center;justify-content:space-between;padding:10px 16px;background:var(--surface2);border-bottom:1px solid var(--border);flex-shrink:0}
+.date-strip-label{font-family:'Syne',sans-serif;font-size:14px;font-weight:700}
+.date-strip-sub{font-size:11px;color:var(--muted);margin-top:1px}
+.config-day-btn{padding:6px 12px;background:var(--surface);border:1px solid var(--border);border-radius:20px;font-size:11px;font-weight:600;cursor:pointer;color:var(--muted);font-family:'Inter',sans-serif;transition:all 0.15s}
+.config-day-btn.open{background:var(--combinado-dim);border-color:var(--combinado);color:var(--combinado)}
+
+/* TIMELINE */
+.timeline-header{display:grid;grid-template-columns:44px 1fr 1fr;background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0}
+.tl-room-header{padding:9px 8px;text-align:center;font-size:10px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;border-right:1px solid var(--border)}
+.tl-room-header:last-child{border-right:none}
+.agenda-container{flex:1;overflow-y:auto}
+.agenda-container::-webkit-scrollbar{width:3px}
+.agenda-container::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+.timeline-wrapper{display:grid;grid-template-columns:44px 1fr 1fr;position:relative}
+.time-axis{position:relative;border-right:1px solid var(--border)}
+.time-tick{position:absolute;left:0;right:0;display:flex;align-items:center;justify-content:flex-end;padding-right:6px;font-size:9px;color:var(--muted);font-weight:500;transform:translateY(-50%);pointer-events:none;z-index:5}
+.time-tick-line{position:absolute;left:44px;right:0;border-top:1px solid var(--border);opacity:0.4;pointer-events:none;z-index:1}
+.room-col{position:relative;border-right:1px solid var(--border)}
+.room-col:last-child{border-right:none}
+
+.appt-block{position:absolute;left:4px;right:4px;border-radius:var(--r-sm);border-left:3px solid;padding:8px 10px;cursor:pointer;transition:all 0.15s;overflow:hidden;z-index:5}
+.appt-block:active{transform:scale(0.97)}
+.appt-block.fisio{background:var(--fisio-dim);border-color:var(--fisio)}
+.appt-block.nesa{background:var(--nesa-dim);border-color:var(--nesa)}
+.appt-block.combinado{background:var(--combinado-dim);border-color:var(--combinado)}
+.appt-block.arrived{opacity:0.6}
+.ab-name{font-size:12px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ab-time{font-size:10px;color:var(--muted);margin-top:2px}
+.ab-tag{font-size:9px;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;margin-top:4px}
+.appt-block.fisio .ab-tag{color:var(--fisio)}
+.appt-block.nesa .ab-tag{color:var(--nesa)}
+.appt-block.combinado .ab-tag{color:var(--combinado)}
+
+.free-slot{position:absolute;left:4px;right:4px;border-radius:var(--r-sm);border:1.5px dashed var(--border);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all 0.15s;z-index:3}
+.free-slot:hover{border-color:var(--fisio);background:var(--fisio-dim)}
+.free-slot-label{font-size:10px;color:transparent;transition:all 0.15s}
+.free-slot:hover .free-slot-label{color:var(--fisio)}
+
+.closed-zone{position:absolute;left:0;right:0;background:repeating-linear-gradient(45deg,transparent,transparent 6px,rgba(255,255,255,0.015) 6px,rgba(255,255,255,0.015) 12px);z-index:2}
+.now-line{position:absolute;left:44px;right:0;border-top:2px solid var(--fisio);z-index:15;pointer-events:none}
+.now-dot{position:absolute;left:-5px;top:-5px;width:10px;height:10px;border-radius:50%;background:var(--fisio)}
+
+.patient-item{display:flex;align-items:center;gap:12px;padding:12px;background:var(--surface2);border-radius:var(--r-sm);margin-bottom:8px;cursor:pointer;transition:all 0.15s}
+.patient-item:active{transform:scale(0.98)}
+.p-avatar{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;color:#fff;flex-shrink:0}
+.p-info{flex:1;min-width:0}
+.p-name{font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.p-detail{font-size:11px;color:var(--muted);margin-top:2px}
+.p-actions{display:flex;gap:6px;flex-shrink:0}
+.wa-btn{width:36px;height:36px;border-radius:50%;background:#25D366;border:none;color:#fff;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;text-decoration:none;flex-shrink:0}
+.mail-btn{width:36px;height:36px;border-radius:50%;background:var(--nesa-dim);border:none;color:var(--nesa);font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;text-decoration:none;flex-shrink:0}
+
+.stag{display:inline-block;padding:3px 8px;border-radius:4px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em}
+.stag.fisio{background:var(--fisio-dim);color:var(--fisio)}
+.stag.nesa{background:var(--nesa-dim);color:var(--nesa)}
+.stag.combinado{background:var(--combinado-dim);color:var(--combinado)}
+
+.stats-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
+.stat-box{background:var(--surface2);border-radius:var(--r-sm);padding:14px;text-align:center}
+.stat-num{font-family:'Syne',sans-serif;font-size:28px;font-weight:800}
+.stat-label{font-size:11px;color:var(--muted);margin-top:2px}
+.occ-item{margin-bottom:12px}
+.occ-header{display:flex;justify-content:space-between;margin-bottom:6px;font-size:13px}
+.occ-bar{height:6px;background:var(--border);border-radius:3px;overflow:hidden}
+.occ-fill{height:100%;border-radius:3px;transition:width 0.6s}
+
+.setting-row{display:flex;align-items:center;justify-content:space-between;padding:14px 0;border-bottom:1px solid var(--border)}
+.setting-row:last-child{border-bottom:none}
+.setting-label{font-size:14px;font-weight:500}
+.setting-sub{font-size:12px;color:var(--muted);margin-top:2px}
+.dur-input{width:64px;padding:6px;text-align:center;background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-sm);color:var(--text);font-family:'Syne',sans-serif;font-size:18px;font-weight:700;outline:none}
+.dur-input:focus{border-color:var(--fisio)}
+.time-input{padding:8px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-sm);color:var(--text);font-family:'Inter',sans-serif;font-size:13px;outline:none}
+.time-input:focus{border-color:var(--fisio)}
+.toggle-wrap{position:relative;width:48px;height:26px;cursor:pointer;display:inline-block}
+.toggle-wrap input{opacity:0;width:0;height:0;position:absolute}
+.toggle-track{position:absolute;inset:0;background:var(--border);border-radius:13px;transition:0.2s}
+.toggle-wrap input:checked+.toggle-track{background:var(--combinado)}
+.toggle-thumb{position:absolute;top:3px;left:3px;width:20px;height:20px;background:#fff;border-radius:50%;transition:0.2s;pointer-events:none}
+.toggle-wrap input:checked~.toggle-thumb{transform:translateX(22px)}
+
+.sheet-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:100;opacity:0;pointer-events:none;transition:opacity 0.25s;backdrop-filter:blur(4px)}
+.sheet-overlay.open{opacity:1;pointer-events:all}
+.sheet{position:fixed;bottom:0;left:0;right:0;background:var(--surface);border-radius:20px 20px 0 0;padding:0 20px 40px;z-index:101;transform:translateY(100%);transition:transform 0.3s cubic-bezier(0.32,0.72,0,1);max-height:92vh;overflow-y:auto}
+.sheet-overlay.open .sheet{transform:translateY(0)}
+.sheet-handle{width:40px;height:4px;background:var(--border);border-radius:2px;margin:12px auto 20px}
+.sheet-title{font-family:'Syne',sans-serif;font-size:20px;font-weight:700;margin-bottom:6px}
+.sheet-sub{font-size:13px;color:var(--muted);margin-bottom:20px}
+
+.form-group{margin-bottom:14px}
+.form-label{font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:6px}
+.form-input{width:100%;padding:12px 14px;background:var(--surface2);border:1.5px solid var(--border);border-radius:var(--r-sm);color:var(--text);font-family:'Inter',sans-serif;font-size:14px;outline:none;transition:border-color 0.15s}
+.form-input:focus{border-color:var(--fisio)}
+
+.svc-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+.svc-btn{padding:12px 8px;border:1.5px solid var(--border);border-radius:var(--r-sm);background:none;color:var(--text);font-family:'Inter',sans-serif;font-size:12px;font-weight:600;cursor:pointer;transition:all 0.15s;text-align:center}
+.svc-btn .svc-dur{font-size:10px;color:var(--muted);display:block;margin-top:3px;font-weight:400}
+.svc-btn.sel.fisio{background:var(--fisio-dim);border-color:var(--fisio);color:var(--fisio)}
+.svc-btn.sel.nesa{background:var(--nesa-dim);border-color:var(--nesa);color:var(--nesa)}
+.svc-btn.sel.combinado{background:var(--combinado-dim);border-color:var(--combinado);color:var(--combinado)}
+
+.slot-time{padding:10px 4px;border:1.5px solid var(--border);border-radius:var(--r-sm);background:none;color:var(--text);font-family:'Inter',sans-serif;font-size:12px;font-weight:600;cursor:pointer;transition:all 0.15s;text-align:center}
+.slot-time:hover{border-color:var(--fisio);color:var(--fisio)}
+.slot-time.sel{background:var(--fisio);border-color:var(--fisio);color:#fff}
+
+.btn{width:100%;padding:14px;border:none;border-radius:var(--r-sm);font-family:'Syne',sans-serif;font-size:15px;font-weight:700;cursor:pointer;transition:all 0.15s;margin-top:8px}
+.btn:active{transform:scale(0.98)}
+.btn-primary{background:var(--fisio);color:#fff}
+.btn-primary:disabled{background:var(--border);color:var(--muted);cursor:not-allowed;transform:none}
+.btn-success{background:var(--combinado);color:#fff}
+.btn-danger{background:transparent;border:1.5px solid var(--fisio);color:var(--fisio)}
+.btn-ghost{background:var(--surface2);color:var(--text)}
+.btn-cal{background:var(--nesa-dim);color:var(--nesa);border:1.5px solid var(--nesa)}
+
+.detail-header{display:flex;align-items:center;gap:14px;padding:16px 0;border-bottom:1px solid var(--border);margin-bottom:14px}
+.detail-avatar{width:52px;height:52px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:800;color:#fff;flex-shrink:0;font-family:'Syne',sans-serif}
+.detail-name{font-family:'Syne',sans-serif;font-size:20px;font-weight:700}
+.detail-contact-btns{display:flex;gap:8px;margin-top:8px}
+.detail-row{display:flex;justify-content:space-between;align-items:center;padding:11px 0;border-bottom:1px solid var(--border)}
+.detail-row:last-of-type{border-bottom:none}
+.dr-label{font-size:13px;color:var(--muted)}
+.dr-value{font-size:13px;font-weight:600}
+.notes-input{width:100%;padding:12px;background:var(--surface2);border:1.5px solid var(--border);border-radius:var(--r-sm);color:var(--text);font-family:'Inter',sans-serif;font-size:13px;outline:none;resize:none;height:80px;margin-top:12px;transition:border-color 0.15s}
+.notes-input:focus{border-color:var(--fisio)}
+.status-btn{padding:6px 12px;border-radius:20px;border:1.5px solid var(--border);background:none;color:var(--muted);font-size:11px;font-weight:700;cursor:pointer;font-family:'Inter',sans-serif;transition:all 0.15s}
+.status-btn.arrived{background:var(--combinado-dim);border-color:var(--combinado);color:var(--combinado)}
+
+.franja-row{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.del-franja{width:28px;height:28px;border-radius:50%;background:var(--fisio-dim);border:none;color:var(--fisio);cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.add-franja{display:flex;align-items:center;gap:6px;padding:8px 12px;border:1.5px dashed var(--border);border-radius:var(--r-sm);background:none;color:var(--muted);font-size:12px;cursor:pointer;font-family:'Inter',sans-serif;margin-top:4px;width:100%}
+.add-franja:hover{border-color:var(--fisio);color:var(--fisio)}
+
+/* PATIENT PORTAL CALENDAR */
+.patient-cal-day{aspect-ratio:1;display:flex;flex-direction:column;align-items:center;justify-content:center;border-radius:8px;cursor:pointer;transition:all 0.15s;position:relative;border:1.5px solid transparent}
+.patient-cal-day.available{border-color:var(--combinado);background:var(--combinado-dim)}
+.patient-cal-day.available:hover{background:rgba(77,204,143,0.3)}
+.patient-cal-day.selected-day{background:var(--fisio);border-color:var(--fisio);color:#fff}
+.patient-cal-day.full{opacity:0.3;cursor:not-allowed;border-color:transparent}
+.patient-cal-day.closed{opacity:0.2;cursor:not-allowed;border-color:transparent}
+.patient-cal-day.other-m{opacity:0.15;pointer-events:none}
+.patient-cal-day.past{opacity:0.2;pointer-events:none}
+.patient-cal-day-num{font-size:12px;font-weight:600}
+.patient-cal-slots{font-size:9px;margin-top:2px;font-weight:600}
+
+.step-indicator{display:flex;align-items:center;justify-content:center;gap:6px;padding:14px 0;flex-shrink:0}
+.step-dot{width:8px;height:8px;border-radius:50%;background:var(--border);transition:all 0.3s}
+.step-dot.active{background:var(--fisio);width:24px;border-radius:4px}
+.step-dot.done{background:var(--combinado)}
+.step-content{flex:1;overflow-y:auto;padding:16px}
+
+.my-appt{background:var(--surface2);border-radius:var(--r);padding:16px;margin-bottom:10px;border-left:4px solid}
+.my-appt.fisio{border-color:var(--fisio)}
+.my-appt.nesa{border-color:var(--nesa)}
+.my-appt.combinado{border-color:var(--combinado)}
+.ma-service{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:6px}
+.ma-service.fisio{color:var(--fisio)}
+.ma-service.nesa{color:var(--nesa)}
+.ma-service.combinado{color:var(--combinado)}
+.ma-date{font-family:'Syne',sans-serif;font-size:16px;font-weight:700}
+.ma-time{font-size:13px;color:var(--muted);margin-top:3px}
+.ma-actions{display:flex;gap:8px;margin-top:10px}
+.ma-cancel{padding:6px 12px;border:1px solid var(--border);border-radius:var(--r-sm);background:none;color:var(--muted);font-size:12px;cursor:pointer;font-family:'Inter',sans-serif}
+.ma-cal{padding:6px 12px;border:1px solid var(--nesa);border-radius:var(--r-sm);background:var(--nesa-dim);color:var(--nesa);font-size:12px;cursor:pointer;font-family:'Inter',sans-serif;text-decoration:none;display:inline-block}
+
+/* PIN SCREEN */
+.pin-screen{background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 24px;flex:1}
+.pin-logo{font-family:'Syne',sans-serif;font-size:28px;font-weight:800;margin-bottom:6px;text-align:center}
+.pin-logo span{color:var(--fisio)}
+.pin-sub{font-size:13px;color:var(--muted);margin-bottom:40px;text-align:center}
+.pin-dots{display:flex;gap:16px;margin-bottom:32px}
+.pin-dot{width:16px;height:16px;border-radius:50%;background:var(--border);transition:all 0.2s}
+.pin-dot.filled{background:var(--fisio)}
+.pin-keypad{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;width:240px}
+.pin-key{height:64px;border-radius:var(--r);background:var(--surface);border:1px solid var(--border);color:var(--text);font-family:'Syne',sans-serif;font-size:22px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.15s}
+.pin-key:active{background:var(--surface2);transform:scale(0.95)}
+.pin-key.delete{font-size:18px;color:var(--muted)}
+.pin-key.empty{background:transparent;border:none;pointer-events:none}
+.pin-error{font-size:13px;color:var(--fisio);margin-top:16px;text-align:center;min-height:20px}
+
+@keyframes spin{to{transform:rotate(360deg)}}
+.toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--text);color:var(--bg);padding:12px 20px;border-radius:20px;font-size:13px;font-weight:600;z-index:200;opacity:0;transition:all 0.3s;white-space:nowrap;pointer-events:none}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.toast.success{background:var(--combinado);color:#fff}
+.toast.error{background:var(--fisio);color:#fff}
+.empty{text-align:center;padding:40px 20px;color:var(--muted)}
+.empty-icon{font-size:40px;margin-bottom:12px}
+</style>
+</head>
+<body>
+
+<!-- HOME -->
+<div class="screen active" id="screen-home">
+  <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;padding:40px 24px;position:relative">
+    <div style="font-family:Syne,sans-serif;font-size:32px;font-weight:800;margin-bottom:8px">Consulta<span style="color:var(--fisio)">Fisio</span></div>
+    <div style="color:var(--muted);font-size:14px">Cargando portal...</div>
+  </div>
+  <button onclick="showScreen('pin');pinReset()" style="position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:none;border:none;color:var(--border);font-size:13px;cursor:pointer;font-family:Inter,sans-serif;padding:8px 20px;letter-spacing:0.06em">· · ·</button>
+</div>
+
+<!-- PIN -->
+<div class="screen" id="screen-pin">
+  <div class="pin-screen">
+    <div class="pin-logo">Consulta<span>Fisio</span></div>
+    <div class="pin-sub">Introduce tu PIN para acceder</div>
+    <div class="pin-dots">
+      <div class="pin-dot" id="pd-0"></div>
+      <div class="pin-dot" id="pd-1"></div>
+      <div class="pin-dot" id="pd-2"></div>
+      <div class="pin-dot" id="pd-3"></div>
+    </div>
+    <div class="pin-keypad">
+      <button class="pin-key" onclick="pinKey('1')">1</button>
+      <button class="pin-key" onclick="pinKey('2')">2</button>
+      <button class="pin-key" onclick="pinKey('3')">3</button>
+      <button class="pin-key" onclick="pinKey('4')">4</button>
+      <button class="pin-key" onclick="pinKey('5')">5</button>
+      <button class="pin-key" onclick="pinKey('6')">6</button>
+      <button class="pin-key" onclick="pinKey('7')">7</button>
+      <button class="pin-key" onclick="pinKey('8')">8</button>
+      <button class="pin-key" onclick="pinKey('9')">9</button>
+      <button class="pin-key empty"></button>
+      <button class="pin-key" onclick="pinKey('0')">0</button>
+      <button class="pin-key delete" onclick="pinDel()">⌫</button>
+    </div>
+    <div class="pin-error" id="pin-error"></div>
+    <button onclick="goPatient()" style="margin-top:24px;background:none;border:none;color:var(--muted);font-size:13px;cursor:pointer;font-family:'Inter',sans-serif">← Volver</button>
+  </div>
+</div>
+
+<!-- FISIO -->
+<div class="screen" id="screen-fisio">
+  <div class="app-header">
+    <button class="back-btn" onclick="goHome()">←</button>
+    <span class="header-title">Consulta Fisio</span>
+    <button class="header-action" onclick="openNewAppt()">+ Cita</button>
+  </div>
+  <div class="tab-bar">
+    <button class="tab-btn active" onclick="fisioTab('agenda',this)">📅 Agenda</button>
+    <button class="tab-btn" onclick="fisioTab('patients',this)">👥 Pacientes</button>
+    <button class="tab-btn" onclick="fisioTab('stats',this)">📊 Stats</button>
+    <button class="tab-btn" onclick="fisioTab('settings',this)">⚙️ Config</button>
+  </div>
+
+  <div id="ftab-agenda" style="display:flex;flex-direction:column;flex:1;overflow:hidden">
+    <div class="month-cal" id="fisio-cal"></div>
+    <div class="date-strip">
+      <div>
+        <div class="date-strip-label" id="strip-label">-</div>
+        <div class="date-strip-sub" id="strip-sub">-</div>
+      </div>
+      <button class="config-day-btn" id="config-day-btn" onclick="openDayConfig()">⚙️ Configurar día</button>
+    </div>
+    <div class="timeline-header">
+      <div class="tl-room-header" style="color:var(--muted)"></div>
+      <div class="tl-room-header" style="color:var(--fisio)">🔴 Sala Fisio</div>
+      <div class="tl-room-header" style="color:var(--nesa)">🔵 Sala Nesa</div>
+    </div>
+    <div class="agenda-container"><div class="timeline-wrapper" id="timeline-wrapper"></div></div>
+  </div>
+
+  <div id="ftab-patients" style="display:none;flex:1;overflow:hidden;flex-direction:column">
+    <div style="padding:12px 16px;background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0">
+      <input type="text" class="form-input" placeholder="🔍 Buscar paciente..." oninput="filterPatients(this.value)" style="margin:0">
+    </div>
+    <div class="scroll-content" id="patients-list"></div>
+  </div>
+
+  <div id="ftab-stats" style="display:none;flex:1;overflow:hidden">
+    <div class="scroll-content" id="stats-content"></div>
+  </div>
+
+  <div id="ftab-settings" style="display:none;flex:1;overflow:hidden">
+    <div class="scroll-content">
+      <div class="card">
+        <div class="card-title">⏱ Duraciones por defecto</div>
+        <div style="font-size:12px;color:var(--muted);margin-bottom:14px">Se aplican a los días nuevos. Modificables día a día.</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;text-align:center">
+          <div>
+            <div style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--fisio);margin-bottom:8px">Fisio</div>
+            <input type="number" class="dur-input" id="set-dur-fisio" value="50" min="10" max="120" onchange="saveDefaultDur()">
+            <div style="font-size:10px;color:var(--muted);margin-top:4px">min</div>
+          </div>
+          <div>
+            <div style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--nesa);margin-bottom:8px">Nesa</div>
+            <input type="number" class="dur-input" id="set-dur-nesa" value="60" min="10" max="120" onchange="saveDefaultDur()">
+            <div style="font-size:10px;color:var(--muted);margin-top:4px">min</div>
+          </div>
+          <div>
+            <div style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--combinado);margin-bottom:8px">Comb.</div>
+            <input type="number" class="dur-input" id="set-dur-combinado" value="90" min="30" max="180" onchange="saveDefaultDur()">
+            <div style="font-size:10px;color:var(--muted);margin-top:4px">min</div>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">📅 Gestión de días</div>
+        <div style="font-size:13px;color:var(--muted);line-height:1.6">
+          Todos los días están <strong style="color:var(--text)">cerrados por defecto</strong>.<br>
+          Selecciona un día en el calendario y pulsa <strong style="color:var(--text)">"Configurar día"</strong> para abrirlo, añadir franjas horarias y ajustar las duraciones de ese día concreto.
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">🔐 Seguridad</div>
+        <div class="setting-row">
+          <div><div class="setting-label">PIN de acceso</div><div class="setting-sub" id="pin-current-sub">PIN actual: 4 dígitos</div></div>
+          <button onclick="openChangePIN()" style="padding:6px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-sm);color:var(--text);font-size:12px;cursor:pointer;font-family:'Inter',sans-serif">Cambiar</button>
+        </div>
+      </div>
+        <div class="setting-row">
+          <div><div class="setting-label">Recordatorio 24h antes</div><div class="setting-sub">Email automático al paciente</div></div>
+          <label class="toggle-wrap"><input type="checkbox" checked><div class="toggle-track"></div><div class="toggle-thumb"></div></label>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- PATIENT -->
+<div class="screen" id="screen-patient">
+  <div class="app-header">
+    <span class="header-title">Consulta Fisio</span>
+    <button onclick="showScreen('pin');pinReset()" style="background:none;border:none;color:var(--border);font-size:16px;cursor:pointer;padding:4px 8px;letter-spacing:0.1em">···</button>
+  </div>
+  <div class="tab-bar">
+    <button class="tab-btn active" onclick="patientTab('book',this)">📅 Reservar</button>
+    <button class="tab-btn" onclick="patientTab('mycitas',this)">🗂 Mis citas</button>
+  </div>
+  <div id="ptab-book" style="display:flex;flex-direction:column;flex:1;overflow:hidden">
+    <div class="step-indicator">
+      <div class="step-dot active" id="sdot-0"></div>
+      <div class="step-dot" id="sdot-1"></div>
+      <div class="step-dot" id="sdot-2"></div>
+      <div class="step-dot" id="sdot-3"></div>
+    </div>
+    <div class="step-content" id="step-content"></div>
+  </div>
+  <div id="ptab-mycitas" style="display:none;flex:1;overflow:hidden">
+    <div class="scroll-content" id="my-citas-list"></div>
+  </div>
+</div>
+
+<!-- SHEET: CONFIG DÍA -->
+<div class="sheet-overlay" id="sheet-dayconfig">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title" id="dc-title">Configurar día</div>
+    <div class="sheet-sub" id="dc-sub">-</div>
+    <div class="form-group">
+      <label class="form-label">Franjas horarias</label>
+      <div id="dc-franjas"></div>
+      <button class="add-franja" onclick="dcAddFranja()">+ Añadir franja</button>
+    </div>
+    <div style="border-top:1px solid var(--border);padding-top:16px;margin-top:8px">
+      <label class="form-label">Duración de sesiones este día</label>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;text-align:center;margin-top:8px">
+        <div>
+          <div style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--fisio);margin-bottom:6px">Fisio</div>
+          <input type="number" class="dur-input" id="dc-dur-fisio" min="10" max="120">
+          <div style="font-size:10px;color:var(--muted);margin-top:3px">min</div>
+        </div>
+        <div>
+          <div style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--nesa);margin-bottom:6px">Nesa</div>
+          <input type="number" class="dur-input" id="dc-dur-nesa" min="10" max="120">
+          <div style="font-size:10px;color:var(--muted);margin-top:3px">min</div>
+        </div>
+        <div>
+          <div style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--combinado);margin-bottom:6px">Comb.</div>
+          <input type="number" class="dur-input" id="dc-dur-combinado" min="30" max="180">
+          <div style="font-size:10px;color:var(--muted);margin-top:3px">min</div>
+        </div>
+      </div>
+    </div>
+    <button class="btn btn-success" onclick="saveDayConfig()" style="margin-top:20px">✓ Guardar configuración</button>
+    <button class="btn btn-danger" onclick="closeDayConfig()" id="dc-close-btn">🔒 Cerrar este día</button>
+    <button class="btn btn-ghost" onclick="closeSheet('sheet-dayconfig')">Cancelar</button>
+  </div>
+</div>
+
+<!-- SHEET: NUEVA CITA -->
+<div class="sheet-overlay" id="sheet-newappt">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">Nueva cita</div>
+    <div class="sheet-sub" id="sheet-date-label">-</div>
+    <div class="form-group">
+      <label class="form-label">Paciente</label>
+      <input type="text" class="form-input" id="na-name" placeholder="Nombre completo" list="na-datalist" oninput="autofillP(this.value)">
+      <datalist id="na-datalist"></datalist>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Teléfono</label>
+      <input type="tel" class="form-input" id="na-phone" placeholder="600 000 000">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Servicio</label>
+      <div class="svc-grid">
+        <button class="svc-btn sel fisio" onclick="selSvc('fisio',this)">Fisio<span class="svc-dur" id="sd-fisio">50 min</span></button>
+        <button class="svc-btn" onclick="selSvc('nesa',this)">Nesa<span class="svc-dur" id="sd-nesa">60 min</span></button>
+        <button class="svc-btn" onclick="selSvc('combinado',this)">Comb.<span class="svc-dur" id="sd-comb">90 min</span></button>
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Hora de inicio</label>
+      <input type="time" class="form-input" id="na-time" value="09:00" onchange="checkConflict()">
+      <div id="na-conflict" style="display:none;margin-top:8px;padding:8px 12px;background:var(--fisio-dim);border-radius:var(--r-sm);font-size:12px;color:var(--fisio)">⚠️ Conflicto con otra cita</div>
+    </div>
+    <button class="btn btn-primary" onclick="confirmAppt()">Confirmar cita</button>
+    <button class="btn btn-ghost" onclick="closeSheet('sheet-newappt')">Cancelar</button>
+  </div>
+</div>
+
+<!-- SHEET: DETALLE CITA -->
+<div class="sheet-overlay" id="sheet-apptdetail">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="detail-header">
+      <div class="detail-avatar" id="dd-avatar">?</div>
+      <div style="flex:1;min-width:0">
+        <div class="detail-name" id="dd-name">-</div>
+        <div class="detail-contact-btns">
+          <a id="dd-wa" href="#" target="_blank" class="wa-btn">💬</a>
+          <a id="dd-mail" href="#" class="mail-btn">✉️</a>
+        </div>
+      </div>
+    </div>
+    <div class="detail-row"><span class="dr-label">Fecha</span><span class="dr-value" id="dd-date">-</span></div>
+    <div class="detail-row"><span class="dr-label">Hora</span><span class="dr-value" id="dd-time">-</span></div>
+    <div class="detail-row"><span class="dr-label">Servicio</span><span class="dr-value" id="dd-service">-</span></div>
+    <div class="detail-row"><span class="dr-label">Sala</span><span class="dr-value" id="dd-room">-</span></div>
+    <div class="detail-row"><span class="dr-label">Teléfono</span><span class="dr-value" id="dd-phone">-</span></div>
+    <div class="detail-row" id="dd-email-row"><span class="dr-label">Email</span><span class="dr-value" id="dd-email">-</span></div>
+    <div class="detail-row"><span class="dr-label">Estado</span><button class="status-btn" id="dd-arrived" onclick="toggleArrived()">Marcar llegada</button></div>
+    <label class="form-label" style="margin-top:14px;display:block">Notas clínicas</label>
+    <textarea class="notes-input" id="dd-notes" placeholder="Observaciones..."></textarea>
+    <button class="btn btn-primary" onclick="saveAndClose()" style="margin-top:16px">Guardar</button>
+    <button class="btn btn-danger" onclick="cancelApptDetail()">Cancelar cita</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ════════════════════════════════
+// PIN
+// ════════════════════════════════
+let fisioPin = '1234';
+let pinCurrent = '';
+let pinChanging = false;
+let pinChangeStep = 0;
+let pinNewTemp = '';
+
+function pinReset(){
+  pinCurrent='';pinChanging=false;
+  document.getElementById('pin-error').textContent='';
+  updatePinDots();
+}
+
+function pinKey(digit){
+  if(pinCurrent.length>=4)return;
+  pinCurrent+=digit;
+  updatePinDots();
+  if(pinCurrent.length===4){
+    setTimeout(()=>{
+      if(pinCurrent===fisioPin){
+        goFisio();
+        pinReset();
+      }else{
+        document.getElementById('pin-error').textContent='PIN incorrecto. Inténtalo de nuevo.';
+        setTimeout(()=>{pinCurrent='';updatePinDots();document.getElementById('pin-error').textContent='';},600);
+      }
+    },200);
+  }
+}
+
+function pinDel(){
+  pinCurrent=pinCurrent.slice(0,-1);
+  updatePinDots();
+  document.getElementById('pin-error').textContent='';
+}
+
+function updatePinDots(){
+  for(let i=0;i<4;i++){
+    const d=document.getElementById('pd-'+i);
+    if(d)d.className='pin-dot'+(i<pinCurrent.length?' filled':'');
+  }
+}
+
+function openChangePIN(){
+  const newPin=prompt('Introduce el nuevo PIN de 4 dígitos:');
+  if(!newPin)return;
+  if(!/^\d{4}$/.test(newPin)){showToast('El PIN debe ser de 4 dígitos','error');return;}
+  fisioPin=newPin;
+  showToast('PIN actualizado','success');
+}
+
+// ════════════════════════════════
+// STATE
+// ════════════════════════════════
+let currentDate = new Date(); currentDate.setHours(0,0,0,0);
+let calViewDate = new Date(currentDate);
+let patCalViewDate = new Date(currentDate);
+const PX = 2;
+
+let defaultDur = {fisio:50, nesa:60, combinado:90};
+let dayConfigs = {}; // key: YYYY-MM-DD, value: {franjas:[{start,end}], dur:{fisio,nesa,combinado}}
+
+let appointments = [];
+let patients = [];
+let naService='fisio', naDate=null, editApptId=null;
+let patientName=null, patientPhone=null, patientEmail=null;
+let bookStep=0, bookService=null, bookDate=null, bookSlot=null;
+let nextId=1;
+let dcDate=null, dcFranjas=[], dcDur={};
+
+// ════════════════════════════════
+// UTILS
+// ════════════════════════════════
+function dateToStr(d){
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+function strToDate(s){
+  const[y,m,d]=s.split('-').map(Number);
+  const date=new Date(y,m-1,d,0,0,0,0);
+  return date;
+}
+function t2m(t){if(!t)return 0;const[h,m]=t.split(':').map(Number);return h*60+m}
+function m2t(m){return String(Math.floor(m/60)).padStart(2,'0')+':'+String(m%60).padStart(2,'0')}
+
+const DN=['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
+const DS=['Do','Lu','Ma','Mi','Ju','Vi','Sá'];
+const MN=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+const ML=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+const svcLabel={fisio:'Fisioterapia',nesa:'Nesa',combinado:'Sesión combinada'};
+const roomLabel={fisio:'Sala Fisio',nesa:'Sala Nesa',combinado:'Sala Fisio + Sala Nesa'};
+const svcColor={fisio:'var(--fisio)',nesa:'var(--nesa)',combinado:'var(--combinado)'};
+
+function fmtDate(d){return DS[d.getDay()]+' '+d.getDate()+' '+ML[d.getMonth()]}
+function fmtDateLong(d){
+  const today=new Date();today.setHours(0,0,0,0);
+  const tom=new Date(today);tom.setDate(today.getDate()+1);
+  if(d.getTime()===today.getTime())return'Hoy · '+d.getDate()+' de '+ML[d.getMonth()];
+  if(d.getTime()===tom.getTime())return'Mañana · '+d.getDate()+' de '+ML[d.getMonth()];
+  return DN[d.getDay()]+' '+d.getDate()+' de '+ML[d.getMonth()];
+}
+
+// Calendar links
+function makeGCalLink(name,dateStr,timeStr,service,dur){
+  const start=dateStr.replace(/-/g,'')+'T'+timeStr.replace(':','')+'00';
+  const end=dateStr.replace(/-/g,'')+'T'+m2t(t2m(timeStr)+dur).replace(':','')+'00';
+  const title=encodeURIComponent('Consulta Fisio — '+svcLabel[service]);
+  const details=encodeURIComponent('Servicio: '+svcLabel[service]);
+  return`https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${start}/${end}&details=${details}`;
+}
+
+function showCalOptions(name,dateStr,timeStr,service,dur){
+  const gcal=makeGCalLink(name,dateStr,timeStr,service,dur);
+
+  // Build ICS content as base64 for universal compatibility
+  const start=dateStr.replace(/-/g,'')+'T'+timeStr.replace(':','')+'00';
+  const end=dateStr.replace(/-/g,'')+'T'+m2t(t2m(timeStr)+dur).replace(':','')+'00';
+  const now=new Date().toISOString().replace(/[-:.]/g,'').slice(0,15)+'Z';
+  const icsLines=[
+    'BEGIN:VCALENDAR',
+    'VERSION:2.0',
+    'PRODID:-//ConsultaFisio//ES',
+    'BEGIN:VEVENT',
+    'UID:'+now+'@consultafisio',
+    'DTSTAMP:'+now,
+    'DTSTART:'+start,
+    'DTEND:'+end,
+    'SUMMARY:Consulta Fisio - '+svcLabel[service],
+    'DESCRIPTION:Servicio: '+svcLabel[service]+'\\nPaciente: '+name,
+    'END:VEVENT',
+    'END:VCALENDAR'
+  ].join('\r\n');
+
+  // For iOS: use Google Calendar (most reliable), for others offer both
+  const sheet=document.createElement('div');
+  sheet.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:200;display:flex;align-items:flex-end;backdrop-filter:blur(4px)';
+  sheet.innerHTML=`
+    <div style="background:var(--surface);border-radius:20px 20px 0 0;padding:20px 20px 40px;width:100%">
+      <div style="width:40px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 20px"></div>
+      <div style="font-family:'Syne',sans-serif;font-size:18px;font-weight:700;margin-bottom:6px">Guardar en calendario</div>
+      <div style="font-size:13px;color:var(--muted);margin-bottom:20px">Elige tu calendario</div>
+
+      <a href="${gcal}" target="_blank" style="display:flex;align-items:center;gap:14px;padding:16px;background:var(--surface2);border-radius:var(--r-sm);margin-bottom:10px;text-decoration:none;color:var(--text)">
+        <div style="width:40px;height:40px;border-radius:10px;background:#4285F4;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0">📅</div>
+        <div><div style="font-weight:600;font-size:14px">Google Calendar</div><div style="font-size:12px;color:var(--muted);margin-top:2px">Android, iPhone y web</div></div>
+      </a>
+
+      <a href="${gcal}" target="_blank" style="display:flex;align-items:center;gap:14px;padding:16px;background:var(--surface2);border-radius:var(--r-sm);margin-bottom:10px;text-decoration:none;color:var(--text)">
+        <div style="width:40px;height:40px;border-radius:10px;background:#000;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0">🍎</div>
+        <div><div style="font-weight:600;font-size:14px">Apple Calendar</div><div style="font-size:12px;color:var(--muted);margin-top:2px">Abre Google Calendar en iPhone</div></div>
+      </a>
+
+      <a href="${gcal}" target="_blank" style="display:flex;align-items:center;gap:14px;padding:16px;background:var(--surface2);border-radius:var(--r-sm);margin-bottom:20px;text-decoration:none;color:var(--text)">
+        <div style="width:40px;height:40px;border-radius:10px;background:#0078D4;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0">📧</div>
+        <div><div style="font-weight:600;font-size:14px">Outlook / Otros</div><div style="font-size:12px;color:var(--muted);margin-top:2px">Añadir manualmente</div></div>
+      </a>
+
+      <div style="background:var(--surface2);border-radius:var(--r-sm);padding:12px;margin-bottom:16px;font-size:11px;color:var(--muted);line-height:1.5">
+        📋 <strong style="color:var(--text)">Datos de la cita:</strong><br>
+        ${fmtDateLong(strToDate(dateStr))} · ${timeStr} · ${svcLabel[service]}
+      </div>
+
+      <button onclick="this.closest('div').parentElement.parentElement.remove()" style="width:100%;padding:14px;background:var(--surface2);border:none;border-radius:var(--r-sm);color:var(--muted);font-family:'Syne',sans-serif;font-size:15px;font-weight:700;cursor:pointer">Cerrar</button>
+    </div>`;
+  sheet.addEventListener('click',e=>{if(e.target===sheet)sheet.remove()});
+  document.body.appendChild(sheet);
+}
+
+// ════════════════════════════════
+// DAY CONFIG
+// ════════════════════════════════
+function getDayConfig(ds){return dayConfigs[ds]||null}
+function getDayDur(ds){const c=getDayConfig(ds);return c?c.dur:{...defaultDur}}
+function getDayFranjas(ds){const c=getDayConfig(ds);return c?c.franjas:[]}
+function isDayOpen(ds){return !!getDayConfig(ds)&&getDayFranjas(ds).length>0}
+function getDayRange(ds){
+  const f=getDayFranjas(ds);if(!f.length)return null;
+  return{start:Math.min(...f.map(x=>t2m(x.start))),end:Math.max(...f.map(x=>t2m(x.end)))};
+}
+function isInFranjas(min,franjas){return franjas.some(f=>min>=t2m(f.start)&&min<t2m(f.end))}
+function isInFranjasRange(from,to,franjas){return franjas.some(f=>from>=t2m(f.start)&&to<=t2m(f.end))}
+
+// ════════════════════════════════
+// MOTOR DE AGENDA — SMART SLOTS
+// ════════════════════════════════
+function getAppts(ds){return appointments.filter(a=>a.date===ds&&a.status!=='cancelada')}
+
+function getBlocks(ds){
+  const appts=getAppts(ds);
+  const dur=getDayDur(ds);
+  const fisio=[],nesa=[];
+  appts.forEach(a=>{
+    const s=t2m(a.time);
+    if(a.service==='fisio') fisio.push({from:s,to:s+dur.fisio,id:a.id});
+    else if(a.service==='nesa') nesa.push({from:s,to:s+dur.nesa,id:a.id});
+    else{
+      // Combinado: fisio usa 30min, luego nesa usa el resto
+      fisio.push({from:s,to:s+30,id:a.id});
+      nesa.push({from:s+30,to:s+dur.combinado,id:a.id});
+    }
+  });
+  return{fisio,nesa};
+}
+
+function isFree(blocks,from,to){return!blocks.some(b=>b.from<to&&b.to>from)}
+
+// Smart slot calculation — only shows slots where the service FITS
+function getSlots(ds,service){
+  if(!isDayOpen(ds))return[];
+  const franjas=getDayFranjas(ds);
+  const range=getDayRange(ds);
+  const dur=getDayDur(ds);
+  const{fisio,nesa}=getBlocks(ds);
+  const d=dur[service];
+
+  // Calculate free gaps per room
+  function getFreeGaps(blocks){
+    const gaps=[];
+    franjas.forEach(f=>{
+      const fs=t2m(f.start),fe=t2m(f.end);
+      // Sort blocks in this franja
+      const inFranja=blocks.filter(b=>b.from<fe&&b.to>fs)
+        .map(b=>({from:Math.max(b.from,fs),to:Math.min(b.to,fe)}))
+        .sort((a,b)=>a.from-b.from);
+      let cursor=fs;
+      inFranja.forEach(b=>{
+        if(b.from>cursor)gaps.push({from:cursor,to:b.from});
+        cursor=Math.max(cursor,b.to);
+      });
+      if(cursor<fe)gaps.push({from:cursor,to:fe});
+    });
+    return gaps;
+  }
+
+  const slots=[];
+
+  if(service==='fisio'){
+    const gaps=getFreeGaps(fisio);
+    gaps.forEach(g=>{
+      // Only offer slots where fisio duration FITS in the gap
+      let t=g.from;
+      while(t+d<=g.to){
+        slots.push(m2t(t));
+        t+=d; // next possible start is end of this slot
+      }
+    });
+  }else if(service==='nesa'){
+    const gaps=getFreeGaps(nesa);
+    gaps.forEach(g=>{
+      let t=g.from;
+      while(t+d<=g.to){
+        slots.push(m2t(t));
+        t+=d;
+      }
+    });
+  }else{
+    // Combinado: need 30min free in fisio AND nesa free from +30 to +dur
+    const fisioGaps=getFreeGaps(fisio);
+    const nesaGaps=getFreeGaps(nesa);
+
+    fisioGaps.forEach(fg=>{
+      let t=fg.from;
+      while(t+30<=fg.to){
+        // Check nesa free from t+30 to t+dur
+        const nesaFrom=t+30,nesaTo=t+d;
+        const nesaFits=nesaGaps.some(ng=>nesaFrom>=ng.from&&nesaTo<=ng.to);
+        if(nesaFits) slots.push(m2t(t));
+        t+=30; // try every 30min in fisio gaps
+      }
+    });
+  }
+
+  // Deduplicate and sort
+  return[...new Set(slots)].sort();
+}
+
+function calcOcc(ds){
+  if(!isDayOpen(ds))return{fisio:0,nesa:0,total:0};
+  const franjas=getDayFranjas(ds);
+  const totalMin=franjas.reduce((s,f)=>s+t2m(f.end)-t2m(f.start),0);
+  const{fisio,nesa}=getBlocks(ds);
+  function occ(blocks){
+    let o=0;blocks.forEach(b=>{franjas.forEach(f=>{
+      const fr=Math.max(b.from,t2m(f.start)),to=Math.min(b.to,t2m(f.end));
+      if(to>fr)o+=to-fr;
+    });});return Math.min(o,totalMin);
+  }
+  const fo=occ(fisio),no=occ(nesa);
+  return{fisio:Math.round(fo/totalMin*100),nesa:Math.round(no/totalMin*100),total:Math.round((fo+no)/(totalMin*2)*100)};
+}
+
+// ════════════════════════════════
+// NAV
+// ════════════════════════════════
+function showScreen(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById('screen-'+id).classList.add('active')}
+function goHome(){goPatient()}
+function goFisio(){showScreen('fisio');fisioTab('agenda',document.querySelector('#screen-fisio .tab-btn'))}
+function goPatient(){showScreen('patient');bookStep=0;bookService=null;bookDate=null;bookSlot=null;renderBookStep(0);renderMyCitas()}
+
+function fisioTab(tab,btn){
+  ['agenda','patients','stats','settings'].forEach(t=>document.getElementById('ftab-'+t).style.display='none');
+  document.getElementById('ftab-'+tab).style.display='flex';
+  document.querySelectorAll('#screen-fisio .tab-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  if(tab==='agenda'){renderFisioCal();renderTimeline();}
+  if(tab==='patients')renderPatients();
+  if(tab==='stats')renderStats();
+}
+function patientTab(tab,btn){
+  ['book','mycitas'].forEach(t=>document.getElementById('ptab-'+t).style.display='none');
+  document.getElementById('ptab-'+tab).style.display='flex';
+  document.querySelectorAll('#screen-patient .tab-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  if(tab==='mycitas')renderMyCitas();
+}
+
+// ════════════════════════════════
+// FISIO CALENDAR
+// ════════════════════════════════
+function renderFisioCal(){
+  const today=new Date();today.setHours(0,0,0,0);
+  const y=calViewDate.getFullYear(),m=calViewDate.getMonth();
+  const firstDay=new Date(y,m,1);
+  const daysInMonth=new Date(y,m+1,0).getDate();
+  const daysInPrev=new Date(y,m,0).getDate();
+  let startDow=firstDay.getDay();if(startDow===0)startDow=7;
+
+  let html=`<div class="month-nav">
+    <button class="month-nav-btn" onclick="changeCalMonth(-1)">‹</button>
+    <span class="month-label">${MN[m]} ${y}</span>
+    <button class="month-nav-btn" onclick="changeCalMonth(1)">›</button>
+  </div><div class="cal-grid">
+    ${['Lu','Ma','Mi','Ju','Vi','Sá','Do'].map(d=>`<div class="cal-dow">${d}</div>`).join('')}`;
+
+  for(let i=startDow-2;i>=0;i--)
+    html+=`<div class="cal-day other-month"><span class="cal-day-num">${daysInPrev-i}</span></div>`;
+
+  for(let d=1;d<=daysInMonth;d++){
+    const ds=`${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const date=strToDate(ds);
+    const isOpen=isDayOpen(ds);
+    const isToday=date.getTime()===today.getTime();
+    const isSel=date.getTime()===currentDate.getTime();
+    const occ=calcOcc(ds);
+    const occColor=occ.total>80?'var(--fisio)':occ.total>40?'#FFB84D':'var(--combinado)';
+    let cls='cal-day';
+    if(isToday)cls+=' today';
+    if(isSel)cls+=' selected';
+    html+=`<div class="${cls}" style="cursor:pointer;${!isOpen?'opacity:0.45':''}" onclick="fisioSelectDay('${ds}')">
+      <span class="cal-day-num">${d}</span>
+      ${isOpen
+        ?`<div class="cal-occ"><div class="cal-occ-fill" style="width:${occ.total}%;background:${occColor}"></div></div>`
+        :`<span style="font-size:8px;color:var(--muted)">cerrado</span>`}
+    </div>`;
+  }
+  const total=startDow-1+daysInMonth;
+  const rem=total%7===0?0:7-total%7;
+  for(let d=1;d<=rem;d++)
+    html+=`<div class="cal-day other-month"><span class="cal-day-num">${d}</span></div>`;
+  html+='</div>';
+  document.getElementById('fisio-cal').innerHTML=html;
+}
+
+function changeCalMonth(dir){calViewDate=new Date(calViewDate.getFullYear(),calViewDate.getMonth()+dir,1);renderFisioCal()}
+function fisioSelectDay(ds){
+  currentDate=strToDate(ds);
+  calViewDate=new Date(currentDate.getFullYear(),currentDate.getMonth(),1);
+  renderFisioCal();
+  renderTimeline();
+  const isOpen=isDayOpen(ds);
+  const btn=document.getElementById('config-day-btn');
+  if(btn){
+    if(isOpen){
+      const occ=calcOcc(ds);
+      btn.className='config-day-btn open';
+      btn.textContent=`✅ Abierto · ${occ.total}% ocupado`;
+    }else{
+      btn.className='config-day-btn';
+      btn.textContent='⚙️ Configurar día';
+    }
+  }
+}
+
+// ════════════════════════════════
+// DAY CONFIG SHEET
+// ════════════════════════════════
+function openDayConfig(){
+  dcDate=dateToStr(currentDate);
+  const cfg=getDayConfig(dcDate);
+  dcFranjas=cfg?cfg.franjas.map(f=>({...f})):[{start:'09:00',end:'14:00'}];
+  dcDur=cfg?{...cfg.dur}:{...defaultDur};
+  document.getElementById('dc-sub').textContent=fmtDateLong(currentDate);
+  document.getElementById('dc-dur-fisio').value=dcDur.fisio;
+  document.getElementById('dc-dur-nesa').value=dcDur.nesa;
+  document.getElementById('dc-dur-combinado').value=dcDur.combinado;
+  document.getElementById('dc-close-btn').style.display=cfg?'block':'none';
+  renderDcFranjas();
+  openSheet('sheet-dayconfig');
+}
+
+function renderDcFranjas(){
+  document.getElementById('dc-franjas').innerHTML=dcFranjas.map((f,i)=>`
+    <div class="franja-row">
+      <input type="time" class="time-input" value="${f.start}" style="flex:1" id="dcf-s-${i}">
+      <span style="color:var(--muted);font-size:12px">–</span>
+      <input type="time" class="time-input" value="${f.end}" style="flex:1" id="dcf-e-${i}">
+      <button class="del-franja" onclick="dcDelFranja(${i})">×</button>
+    </div>`).join('');
+}
+
+function dcAddFranja(){
+  const last=dcFranjas[dcFranjas.length-1];
+  dcFranjas.push(last?{start:m2t(t2m(last.end)+60),end:m2t(t2m(last.end)+120)}:{start:'09:00',end:'14:00'});
+  renderDcFranjas();
+}
+function dcDelFranja(i){dcFranjas.splice(i,1);renderDcFranjas()}
+
+function saveDayConfig(){
+  dcDur.fisio=parseInt(document.getElementById('dc-dur-fisio').value)||defaultDur.fisio;
+  dcDur.nesa=parseInt(document.getElementById('dc-dur-nesa').value)||defaultDur.nesa;
+  dcDur.combinado=parseInt(document.getElementById('dc-dur-combinado').value)||defaultDur.combinado;
+  dcFranjas=[];
+  for(let i=0;;i++){
+    const s=document.getElementById('dcf-s-'+i);
+    const e=document.getElementById('dcf-e-'+i);
+    if(!s||!e)break;
+    dcFranjas.push({start:s.value,end:e.value});
+  }
+  if(!dcFranjas.length){showToast('Añade al menos una franja','error');return;}
+  dayConfigs[dcDate]={franjas:dcFranjas,dur:{...dcDur}};
+  // Sync calViewDate with configured day
+  currentDate=strToDate(dcDate);
+  calViewDate=new Date(currentDate.getFullYear(),currentDate.getMonth(),1);
+  closeSheet('sheet-dayconfig');
+  renderFisioCal();
+  renderTimeline();
+  showToast('✅ Día configurado','success');
+}
+
+function closeDayConfig(){
+  if(!confirm('¿Cerrar este día? Se eliminarán sus franjas.'))return;
+  delete dayConfigs[dcDate];
+  currentDate=strToDate(dcDate);
+  calViewDate=new Date(currentDate.getFullYear(),currentDate.getMonth(),1);
+  closeSheet('sheet-dayconfig');
+  renderFisioCal();renderTimeline();
+  showToast('Día cerrado');
+}
+
+// ════════════════════════════════
+// TIMELINE
+// ════════════════════════════════
+function renderTimeline(){
+  const ds=dateToStr(currentDate);
+  const today=new Date();today.setHours(0,0,0,0);
+  const isToday=currentDate.getTime()===today.getTime();
+  const isOpen=isDayOpen(ds);
+
+  document.getElementById('strip-label').innerHTML=
+    (isToday?'<span style="color:var(--fisio)">HOY · </span>':'')+
+    DN[currentDate.getDay()]+' '+currentDate.getDate()+' de '+ML[currentDate.getMonth()];
+  document.getElementById('strip-sub').textContent=MN[currentDate.getMonth()]+' '+currentDate.getFullYear();
+
+  const btn=document.getElementById('config-day-btn');
+  if(isOpen){
+    const occ=calcOcc(ds);
+    btn.className='config-day-btn open';
+    btn.textContent=`✅ Abierto · ${occ.total}% ocupado`;
+  }else{
+    btn.className='config-day-btn';
+    btn.textContent='⚙️ Configurar día';
+  }
+
+  const wrapper=document.getElementById('timeline-wrapper');
+  if(!isOpen){
+    wrapper.innerHTML=`<div style="grid-column:1/-1;padding:48px 24px;text-align:center;color:var(--muted)">
+      <div style="font-size:48px;margin-bottom:16px">🔒</div>
+      <div style="font-family:'Syne',sans-serif;font-size:18px;font-weight:700;color:var(--text);margin-bottom:8px">Día cerrado</div>
+      <div style="font-size:13px;margin-bottom:20px">Pulsa el botón para configurar el horario</div>
+      <button onclick="openDayConfig()" style="padding:12px 24px;background:var(--fisio);color:#fff;border:none;border-radius:var(--r-sm);font-family:'Syne',sans-serif;font-size:14px;font-weight:700;cursor:pointer">Configurar este día</button>
+    </div>`;
+    return;
+  }
+
+  const franjas=getDayFranjas(ds);
+  const range=getDayRange(ds);
+  const dur=getDayDur(ds);
+  const sm=range.start,em=range.end;
+  const totalH=(em-sm)*PX;
+  const{fisio:fb,nesa:nb}=getBlocks(ds);
+  const appts=getAppts(ds);
+
+  let timeAxis='',tickLines='';
+  for(let min=sm;min<=em;min+=30){
+    const y=(min-sm)*PX;
+    timeAxis+=`<div class="time-tick" style="top:${y}px">${m2t(min)}</div>`;
+    if(min<em)tickLines+=`<div class="time-tick-line" style="top:${y}px"></div>`;
+  }
+
+  function closedZones(){
+    let z='';
+    if(franjas[0]&&t2m(franjas[0].start)>sm)
+      z+=`<div class="closed-zone" style="top:0;height:${(t2m(franjas[0].start)-sm)*PX}px"></div>`;
+    for(let i=0;i<franjas.length-1;i++){
+      const gs=t2m(franjas[i].end),ge=t2m(franjas[i+1].start);
+      z+=`<div class="closed-zone" style="top:${(gs-sm)*PX}px;height:${(ge-gs)*PX}px"></div>`;
+    }
+    const le=t2m(franjas[franjas.length-1].end);
+    if(le<em)z+=`<div class="closed-zone" style="top:${(le-sm)*PX}px;height:${(em-le)*PX}px"></div>`;
+    return z;
+  }
+
+  function freeSlots(blocks,room){
+    let html='';
+    const occ=[];
+    franjas.forEach(f=>{
+      const fs=t2m(f.start),fe=t2m(f.end);
+      blocks.forEach(b=>{
+        const fr=Math.max(b.from,fs),to=Math.min(b.to,fe);
+        if(to>fr)occ.push({from:fr,to});
+      });
+    });
+    occ.sort((a,b)=>a.from-b.from);
+    const merged=[];
+    occ.forEach(o=>{
+      if(merged.length&&o.from<=merged[merged.length-1].to)merged[merged.length-1].to=Math.max(merged[merged.length-1].to,o.to);
+      else merged.push({...o});
+    });
+    franjas.forEach(f=>{
+      const fs=t2m(f.start),fe=t2m(f.end);
+      let cursor=fs;
+      merged.forEach(o=>{
+        if(o.from>=fe||o.to<=fs)return;
+        const freeTo=Math.min(o.from,fe);
+        if(freeTo>cursor&&(freeTo-cursor)>=5){
+          const top=(cursor-sm)*PX,h=(freeTo-cursor)*PX;
+          html+=`<div class="free-slot" style="top:${top}px;height:${h}px" onclick="openNewApptAtTime('${m2t(cursor)}','${room}')">
+            <span class="free-slot-label">+ ${m2t(cursor)}</span></div>`;
+        }
+        cursor=Math.max(cursor,o.to);
+      });
+      if(cursor<fe&&(fe-cursor)>=5){
+        const top=(cursor-sm)*PX,h=(fe-cursor)*PX;
+        html+=`<div class="free-slot" style="top:${top}px;height:${h}px" onclick="openNewApptAtTime('${m2t(cursor)}','${room}')">
+          <span class="free-slot-label">+ ${m2t(cursor)}</span></div>`;
+      }
+    });
+    return html;
+  }
+
+  function apptBlocks(blocks,room){
+    let html='';
+    blocks.forEach(b=>{
+      const appt=appts.find(a=>a.id===b.id);if(!appt)return;
+      const top=(b.from-sm)*PX,h=(b.to-b.from)*PX;
+      const label=room==='fisio'&&appt.service==='combinado'?'Fisio 30min':svcLabel[appt.service];
+      html+=`<div class="appt-block ${appt.service}${appt.status==='arrived'?' arrived':''}"
+        style="top:${top}px;height:${h}px" onclick="openApptDetail(${appt.id})">
+        <div class="ab-name">${appt.name}</div>
+        ${h>=30?`<div class="ab-time">${m2t(b.from)}–${m2t(b.to)}</div>`:''}
+        ${h>=48?`<div class="ab-tag">${label}</div>`:''}
+      </div>`;
+    });
+    return html;
+  }
+
+  let nowLine='';
+  if(isToday){
+    const now=new Date(),nowMin=now.getHours()*60+now.getMinutes();
+    if(nowMin>=sm&&nowMin<=em)
+      nowLine=`<div class="now-line" style="top:${(nowMin-sm)*PX}px"><div class="now-dot"></div></div>`;
+  }
+
+  const cz=closedZones();
+  wrapper.style.height=(totalH+20)+'px';
+  wrapper.innerHTML=`
+    <div class="time-axis" style="height:${totalH+20}px;position:relative">${timeAxis}</div>
+    <div class="room-col" style="height:${totalH+20}px;position:relative">${cz}${freeSlots(fb,'fisio')}${apptBlocks(fb,'fisio')}${tickLines}</div>
+    <div class="room-col" style="height:${totalH+20}px;position:relative">${cz}${freeSlots(nb,'nesa')}${apptBlocks(nb,'nesa')}</div>
+    ${nowLine}`;
+}
+
+// ════════════════════════════════
+// NEW APPT (FISIO)
+// ════════════════════════════════
+function openNewAppt(){
+  naDate=dateToStr(currentDate);
+  if(!isDayOpen(naDate)){showToast('Configura el horario de este día primero','error');return;}
+  naService='fisio';
+  document.getElementById('na-name').value='';
+  document.getElementById('na-phone').value='';
+  const franjas=getDayFranjas(naDate);
+  document.getElementById('na-time').value=franjas[0]?.start||'09:00';
+  document.getElementById('sheet-date-label').textContent=fmtDateLong(currentDate);
+  const dur=getDayDur(naDate);
+  document.getElementById('sd-fisio').textContent=dur.fisio+' min';
+  document.getElementById('sd-nesa').textContent=dur.nesa+' min';
+  document.getElementById('sd-comb').textContent=dur.combinado+' min';
+  document.querySelectorAll('.svc-btn').forEach(b=>{b.className='svc-btn'});
+  document.querySelectorAll('.svc-btn')[0].className='svc-btn sel fisio';
+  document.getElementById('na-datalist').innerHTML=patients.map(p=>`<option value="${p.name}">`).join('');
+  document.getElementById('na-conflict').style.display='none';
+  openSheet('sheet-newappt');
+}
+
+function openNewApptAtTime(time,room){
+  openNewAppt();
+  if(!document.getElementById('sheet-newappt').classList.contains('open'))return;
+  document.getElementById('na-time').value=time;
+  if(room==='nesa')selSvc('nesa',document.querySelectorAll('.svc-btn')[1]);
+  checkConflict();
+}
+
+function selSvc(svc,btn){
+  naService=svc;
+  document.querySelectorAll('.svc-btn').forEach(b=>b.className='svc-btn');
+  btn.className='svc-btn sel '+svc;
+  checkConflict();
+}
+
+function checkConflict(){
+  const time=document.getElementById('na-time').value;if(!time)return;
+  const{fisio,nesa}=getBlocks(naDate);
+  const dur=getDayDur(naDate);
+  const s=t2m(time),d=dur[naService];
+  let conflict=naService==='fisio'?!isFree(fisio,s,s+d):
+    naService==='nesa'?!isFree(nesa,s,s+d):
+    !isFree(fisio,s,s+30)||!isFree(nesa,s+30,s+d);
+  document.getElementById('na-conflict').style.display=conflict?'block':'none';
+}
+
+function autofillP(name){
+  const p=patients.find(p=>p.name.toLowerCase()===name.toLowerCase());
+  if(p)document.getElementById('na-phone').value=p.phone||'';
+}
+
+function confirmAppt(){
+  const name=document.getElementById('na-name').value.trim();
+  const phone=document.getElementById('na-phone').value.trim();
+  const time=document.getElementById('na-time').value;
+  if(!name){showToast('Escribe el nombre','error');return;}
+  if(!time){showToast('Indica la hora','error');return;}
+  let p=patients.find(p=>p.name.toLowerCase()===name.toLowerCase());
+  if(!p){p={id:nextId++,name,phone,email:'',service:naService};patients.push(p);}
+  else{if(phone)p.phone=phone;p.service=naService;}
+  appointments.push({id:nextId++,name,phone:phone||p.phone,email:p.email||'',service:naService,date:naDate,time,status:'confirmada',notes:''});
+  closeSheet('sheet-newappt');renderFisioCal();renderTimeline();
+  const dur=getDayDur(naDate);
+  // Offer calendar save to fisio
+  setTimeout(()=>{
+    if(confirm('¿Guardar esta cita en tu calendario?')){
+      showCalOptions(name,naDate,time,naService,dur[naService]);
+    }
+  },300);
+  showToast('✅ Cita confirmada — '+time,'success');
+}
+
+// ════════════════════════════════
+// APPT DETAIL
+// ════════════════════════════════
+function openApptDetail(id){
+  const a=appointments.find(x=>x.id===id);if(!a)return;
+  editApptId=id;
+  const dur=getDayDur(a.date);
+  document.getElementById('dd-avatar').textContent=a.name.charAt(0);
+  document.getElementById('dd-avatar').style.background=svcColor[a.service];
+  document.getElementById('dd-name').textContent=a.name;
+  document.getElementById('dd-date').textContent=fmtDateLong(strToDate(a.date));
+  document.getElementById('dd-time').textContent=a.time+' — '+m2t(t2m(a.time)+dur[a.service]);
+  document.getElementById('dd-service').innerHTML=`<span class="stag ${a.service}">${svcLabel[a.service]}</span>`;
+  document.getElementById('dd-room').textContent=roomLabel[a.service];
+  document.getElementById('dd-phone').textContent=a.phone||'Sin teléfono';
+  document.getElementById('dd-notes').value=a.notes||'';
+  const wa=document.getElementById('dd-wa');
+  wa.href=a.phone?'https://wa.me/'+a.phone.replace(/\s/g,''):'#';
+  wa.style.display=a.phone?'flex':'none';
+  const emailRow=document.getElementById('dd-email-row');
+  const mail=document.getElementById('dd-mail');
+  if(a.email){emailRow.style.display='flex';document.getElementById('dd-email').textContent=a.email;mail.href='mailto:'+a.email;mail.style.display='flex';}
+  else{emailRow.style.display='none';mail.style.display='none';}
+  const ab=document.getElementById('dd-arrived');
+  ab.className='status-btn'+(a.status==='arrived'?' arrived':'');
+  ab.textContent=a.status==='arrived'?'✓ Ha llegado':'Marcar llegada';
+  openSheet('sheet-apptdetail');
+}
+
+function toggleArrived(){
+  const a=appointments.find(x=>x.id===editApptId);if(!a)return;
+  a.status=a.status==='arrived'?'confirmada':'arrived';
+  a.notes=document.getElementById('dd-notes').value;
+  const ab=document.getElementById('dd-arrived');
+  ab.className='status-btn'+(a.status==='arrived'?' arrived':'');
+  ab.textContent=a.status==='arrived'?'✓ Ha llegado':'Marcar llegada';
+  showToast(a.status==='arrived'?'🟢 Llegada registrada':'Pendiente');
+}
+
+function saveAndClose(){
+  const a=appointments.find(x=>x.id===editApptId);
+  if(a)a.notes=document.getElementById('dd-notes').value;
+  closeSheet('sheet-apptdetail');renderFisioCal();renderTimeline();
+  showToast('Guardado','success');
+}
+
+function cancelApptDetail(){
+  if(!confirm('¿Cancelar esta cita?'))return;
+  const a=appointments.find(x=>x.id===editApptId);
+  if(a){a.notes=document.getElementById('dd-notes').value;a.status='cancelada';}
+  closeSheet('sheet-apptdetail');renderFisioCal();renderTimeline();
+  showToast('Cita cancelada');
+}
+
+// ════════════════════════════════
+// PATIENTS
+// ════════════════════════════════
+function renderPatients(filter=''){
+  const list=document.getElementById('patients-list');
+  const filtered=patients.filter(p=>p.name.toLowerCase().includes(filter.toLowerCase())||(p.phone&&p.phone.includes(filter)));
+  if(!filtered.length){list.innerHTML='<div class="empty"><div class="empty-icon">👥</div><div>Sin pacientes aún</div></div>';return;}
+  list.innerHTML=filtered.map(p=>{
+    const appts=appointments.filter(a=>a.name===p.name&&a.status!=='cancelada').sort((a,b)=>b.date.localeCompare(a.date));
+    const last=appts[0];
+    return`<div class="patient-item">
+      <div class="p-avatar" style="background:${svcColor[p.service]}">${p.name.charAt(0)}</div>
+      <div class="p-info">
+        <div class="p-name">${p.name}</div>
+        <div class="p-detail">${last?fmtDate(strToDate(last.date))+' · '+last.time:'Sin citas'}</div>
+        <div style="margin-top:4px;display:flex;align-items:center;gap:6px">
+          <span class="stag ${p.service}">${p.service}</span>
+          ${p.phone?`<span style="font-size:10px;color:var(--muted)">${p.phone}</span>`:''}
+        </div>
+      </div>
+      <div class="p-actions">
+        ${p.phone?`<a class="wa-btn" href="https://wa.me/${p.phone.replace(/\s/g,'')}" target="_blank">💬</a>`:''}
+        ${p.email?`<a class="mail-btn" href="mailto:${p.email}">✉️</a>`:''}
+      </div>
+    </div>`;
+  }).join('');
+}
+function filterPatients(v){renderPatients(v)}
+
+// ════════════════════════════════
+// STATS
+// ════════════════════════════════
+function renderStats(){
+  const ds=dateToStr(currentDate);
+  const appts=getAppts(ds);
+  const occ=calcOcc(ds);
+  const total=appointments.filter(a=>a.status!=='cancelada').length;
+  document.getElementById('stats-content').innerHTML=`
+    <div class="card">
+      <div class="card-title">📅 ${fmtDateLong(currentDate)}</div>
+      <div class="stats-row">
+        <div class="stat-box"><div class="stat-num" style="color:var(--fisio)">${appts.length}</div><div class="stat-label">Citas hoy</div></div>
+        <div class="stat-box"><div class="stat-num" style="color:var(--combinado)">${occ.total}%</div><div class="stat-label">Ocupación</div></div>
+      </div>
+      <div class="occ-item">
+        <div class="occ-header"><span style="color:var(--fisio)">🔴 Sala Fisio</span><span style="font-weight:700;color:var(--fisio)">${occ.fisio}%</span></div>
+        <div class="occ-bar"><div class="occ-fill" style="width:${occ.fisio}%;background:var(--fisio)"></div></div>
+      </div>
+      <div class="occ-item">
+        <div class="occ-header"><span style="color:var(--nesa)">🔵 Sala Nesa</span><span style="font-weight:700;color:var(--nesa)">${occ.nesa}%</span></div>
+        <div class="occ-bar"><div class="occ-fill" style="width:${occ.nesa}%;background:var(--nesa)"></div></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">📊 Total</div>
+      <div class="stats-row">
+        <div class="stat-box"><div class="stat-num">${patients.length}</div><div class="stat-label">Pacientes</div></div>
+        <div class="stat-box"><div class="stat-num">${total}</div><div class="stat-label">Citas activas</div></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">📋 Pacientes hoy</div>
+      ${appts.length?appts.sort((a,b)=>a.time.localeCompare(b.time)).map(a=>`
+        <div class="patient-item" onclick="openApptDetail(${a.id})">
+          <div class="p-avatar" style="background:${svcColor[a.service]};width:36px;height:36px;font-size:13px">${a.name.charAt(0)}</div>
+          <div class="p-info"><div class="p-name">${a.name}</div><div class="p-detail">${a.time} · <span class="stag ${a.service}">${a.service}</span></div></div>
+          <div style="width:10px;height:10px;border-radius:50%;background:${a.status==='arrived'?'var(--combinado)':'var(--border)'};flex-shrink:0"></div>
+        </div>`).join(''):'<div style="font-size:13px;color:var(--muted);padding:8px 0">Sin citas hoy</div>'}
+    </div>`;
+}
+
+function saveDefaultDur(){
+  defaultDur.fisio=parseInt(document.getElementById('set-dur-fisio').value)||50;
+  defaultDur.nesa=parseInt(document.getElementById('set-dur-nesa').value)||60;
+  defaultDur.combinado=parseInt(document.getElementById('set-dur-combinado').value)||90;
+  showToast('Duraciones por defecto guardadas','success');
+}
+
+// ════════════════════════════════
+// PATIENT PORTAL
+// ════════════════════════════════
+function renderBookStep(step){
+  bookStep=step;
+  [0,1,2,3].forEach(i=>{
+    const d=document.getElementById('sdot-'+i);
+    d.className='step-dot'+(i===step?' active':i<step?' done':'');
+  });
+  const c=document.getElementById('step-content');
+
+  if(step===0){
+    c.innerHTML=`
+      <div style="font-family:'Syne',sans-serif;font-size:20px;font-weight:700;margin-bottom:4px">¿Quién eres?</div>
+      <div style="font-size:13px;color:var(--muted);margin-bottom:20px">Tus datos para la reserva</div>
+      <div class="form-group"><label class="form-label">Nombre <span style="color:var(--fisio)">*</span></label><input type="text" class="form-input" id="b-name" placeholder="Nombre completo" value="${patientName||''}"></div>
+      <div class="form-group"><label class="form-label">Teléfono <span style="color:var(--fisio)">*</span></label><input type="tel" class="form-input" id="b-phone" placeholder="600 000 000" value="${patientPhone||''}"></div>
+      <div class="form-group"><label class="form-label">Email <span style="font-size:10px;color:var(--muted);font-weight:400;text-transform:none;letter-spacing:0">(opcional)</span></label><input type="email" class="form-input" id="b-email" placeholder="tu@email.com" value="${patientEmail||''}"></div>
+      <button class="btn btn-primary" onclick="bookNext0()">Siguiente →</button>`;
+  }else if(step===1){
+    c.innerHTML=`
+      <div style="font-family:'Syne',sans-serif;font-size:20px;font-weight:700;margin-bottom:4px">¿Qué necesitas?</div>
+      <div style="font-size:13px;color:var(--muted);margin-bottom:20px">Tipo de sesión</div>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        ${['fisio','nesa','combinado'].map(s=>`
+          <button onclick="selBookSvc('${s}')" style="padding:16px;border:2px solid ${bookService===s?'var(--'+s+')':'var(--border)'};border-radius:var(--r);background:${bookService===s?'var(--'+s+'-dim)':'transparent'};color:var(--text);text-align:left;cursor:pointer;transition:all 0.15s;width:100%">
+            <div style="font-family:'Syne',sans-serif;font-size:16px;font-weight:700;color:${bookService===s?'var(--'+s+')':'var(--text)'}">${svcLabel[s]}</div>
+            <div style="font-size:12px;color:var(--muted);margin-top:4px">${defaultDur[s]} min · ${s==='fisio'?'Sala fisio':s==='nesa'?'Sala nesa':'Sala fisio + Sala nesa'}</div>
+          </button>`).join('')}
+      </div>
+      <button class="btn btn-primary" style="margin-top:16px" onclick="bookNext1()" ${!bookService?'disabled':''}>Siguiente →</button>
+      <button class="btn btn-ghost" onclick="renderBookStep(0)">← Atrás</button>`;
+  }else if(step===2){
+    // Patient calendar view
+    const today=new Date();today.setHours(0,0,0,0);
+    const y=patCalViewDate.getFullYear(),m=patCalViewDate.getMonth();
+    const firstDay=new Date(y,m,1);
+    const daysInMonth=new Date(y,m+1,0).getDate();
+    const daysInPrev=new Date(y,m,0).getDate();
+    let startDow=firstDay.getDay();if(startDow===0)startDow=7;
+
+    let calHtml=`
+      <div style="font-family:'Syne',sans-serif;font-size:20px;font-weight:700;margin-bottom:4px">¿Qué día?</div>
+      <div style="font-size:13px;color:var(--muted);margin-bottom:16px">${svcLabel[bookService]}</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+        <button onclick="changePatCalMonth(-1)" style="width:32px;height:32px;border-radius:50%;background:var(--surface2);border:none;color:var(--text);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center">‹</button>
+        <span style="font-family:'Syne',sans-serif;font-size:16px;font-weight:700">${MN[m]} ${y}</span>
+        <button onclick="changePatCalMonth(1)" style="width:32px;height:32px;border-radius:50%;background:var(--surface2);border:none;color:var(--text);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center">›</button>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:16px">
+        ${['Lu','Ma','Mi','Ju','Vi','Sá','Do'].map(d=>`<div style="text-align:center;font-size:9px;font-weight:700;color:var(--muted);padding:4px 0">${d}</div>`).join('')}`;
+
+    for(let i=startDow-2;i>=0;i--)
+      calHtml+=`<div class="patient-cal-day other-m"><span class="patient-cal-day-num">${daysInPrev-i}</span></div>`;
+
+    for(let d=1;d<=daysInMonth;d++){
+      const ds=`${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+      const date=strToDate(ds);
+      const isPast=date<today;
+      const isOpen=isDayOpen(ds);
+      const slots=isOpen&&!isPast?getSlots(ds,bookService):[];
+      const isSel=bookDate===ds;
+      const isFull=isOpen&&!isPast&&slots.length===0;
+
+      let cls='patient-cal-day';
+      if(isPast||!isOpen)cls+=' closed';
+      else if(isFull)cls+=' full';
+      else if(isSel)cls+=' selected-day';
+      else cls+=' available';
+
+      const onclick=(isOpen&&!isPast&&slots.length)?`selBookDate('${ds}')`:'';
+      calHtml+=`<div class="${cls}" onclick="${onclick}">
+        <span class="patient-cal-day-num">${d}</span>
+        ${slots.length?`<span class="patient-cal-slots" style="color:${isSel?'#fff':'var(--combinado)'}">${slots.length}h</span>`:''}
+      </div>`;
+    }
+
+    const total=startDow-1+daysInMonth;
+    const rem=total%7===0?0:7-total%7;
+    for(let d=1;d<=rem;d++)
+      calHtml+=`<div class="patient-cal-day other-m"><span class="patient-cal-day-num">${d}</span></div>`;
+
+    calHtml+=`</div>
+      <div style="display:flex;align-items:center;gap:12px;font-size:11px;color:var(--muted);margin-bottom:16px">
+        <div style="display:flex;align-items:center;gap:4px"><div style="width:10px;height:10px;border-radius:2px;background:var(--combinado-dim);border:1px solid var(--combinado)"></div> Disponible</div>
+        <div style="display:flex;align-items:center;gap:4px"><div style="width:10px;height:10px;border-radius:2px;background:var(--fisio);"></div> Seleccionado</div>
+        <div style="display:flex;align-items:center;gap:4px"><div style="width:10px;height:10px;border-radius:2px;background:var(--border)"></div> Sin huecos</div>
+      </div>
+      <button class="btn btn-primary" onclick="bookNext2()" ${!bookDate?'disabled':''}>Siguiente →</button>
+      <button class="btn btn-ghost" onclick="renderBookStep(1)">← Atrás</button>`;
+
+    c.innerHTML=calHtml;
+
+  }else if(step===3){
+    const slots=getSlots(bookDate,bookService);
+    const dur=getDayDur(bookDate);
+    c.innerHTML=`
+      <div style="font-family:'Syne',sans-serif;font-size:20px;font-weight:700;margin-bottom:4px">¿A qué hora?</div>
+      <div style="font-size:13px;color:var(--muted);margin-bottom:16px">${fmtDateLong(strToDate(bookDate))} · ${svcLabel[bookService]}</div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
+        ${slots.map(s=>`<button class="slot-time${bookSlot===s?' sel':''}" style="padding:14px 8px;font-size:14px" onclick="selBookSlot('${s}',this)">${s}</button>`).join('')}
+      </div>
+      ${bookSlot?`
+        <div class="card" style="margin-top:16px;border-color:var(--${bookService})">
+          <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--${bookService});margin-bottom:10px">Resumen</div>
+          <div style="font-size:14px;font-weight:600">${patientName}</div>
+          <div style="font-size:13px;color:var(--muted);margin-top:4px">${fmtDateLong(strToDate(bookDate))}</div>
+          <div style="font-size:13px;color:var(--muted)">${bookSlot} · ${svcLabel[bookService]} · ${dur[bookService]} min</div>
+        </div>
+        <button class="btn btn-primary" onclick="confirmBooking()">✓ Confirmar cita</button>
+      `:`<button class="btn btn-primary" disabled>Elige una hora</button>`}
+      <button class="btn btn-ghost" onclick="renderBookStep(2)">← Atrás</button>`;
+  }
+}
+
+function changePatCalMonth(dir){
+  patCalViewDate=new Date(patCalViewDate.getFullYear(),patCalViewDate.getMonth()+dir,1);
+  renderBookStep(2);
+}
+
+function bookNext0(){
+  const name=document.getElementById('b-name').value.trim();
+  const phone=document.getElementById('b-phone').value.trim();
+  if(!name){showToast('Escribe tu nombre','error');return;}
+  if(!phone){showToast('Escribe tu teléfono','error');return;}
+  patientName=name;patientPhone=phone;patientEmail=document.getElementById('b-email').value.trim();
+  renderBookStep(1);
+}
+function selBookSvc(s){bookService=s;renderBookStep(1)}
+function bookNext1(){if(!bookService)return;bookDate=null;renderBookStep(2)}
+function selBookDate(ds){bookDate=ds;bookSlot=null;renderBookStep(2)}
+function bookNext2(){if(!bookDate)return;bookSlot=null;renderBookStep(3)}
+function selBookSlot(s,btn){
+  bookSlot=s;
+  document.querySelectorAll('#step-content .slot-time').forEach(b=>b.classList.remove('sel'));
+  btn.classList.add('sel');renderBookStep(3);
+}
+
+function confirmBooking(){
+  if(!patientName||!bookDate||!bookSlot||!bookService)return;
+  let p=patients.find(x=>x.name.toLowerCase()===patientName.toLowerCase());
+  if(!p){p={id:nextId++,name:patientName,phone:patientPhone,email:patientEmail||'',service:bookService};patients.push(p);}
+  else{p.phone=patientPhone;if(patientEmail)p.email=patientEmail;p.service=bookService;}
+  const dur=getDayDur(bookDate);
+  appointments.push({id:nextId++,name:patientName,phone:patientPhone,email:patientEmail||'',service:bookService,date:bookDate,time:bookSlot,status:'confirmada',notes:''});
+  
+  // Show confirmation with calendar link
+  const calLink=makeGCalLink(patientName,bookDate,bookSlot,bookService,dur[bookService]);
+  const c=document.getElementById('step-content');
+  c.innerHTML=`
+    <div style="text-align:center;padding:20px 0">
+      <div style="font-size:56px;margin-bottom:16px">✅</div>
+      <div style="font-family:'Syne',sans-serif;font-size:22px;font-weight:800;margin-bottom:8px">¡Cita confirmada!</div>
+      <div style="font-size:14px;color:var(--muted);margin-bottom:24px">${fmtDateLong(strToDate(bookDate))} · ${bookSlot} · ${svcLabel[bookService]}</div>
+    </div>
+    <button class="btn btn-ghost" onclick="patientTab('mycitas',document.querySelectorAll('#screen-patient .tab-btn')[1]);renderMyCitas()">Ver mis citas</button>
+    <button class="btn btn-ghost" onclick="bookService=null;bookDate=null;bookSlot=null;renderBookStep(0)">Reservar otra cita</button>`;
+  
+  [0,1,2,3].forEach(i=>{document.getElementById('sdot-'+i).className='step-dot done'});
+  showToast('✅ Cita confirmada','success');
+}
+
+function renderMyCitas(){
+  const c=document.getElementById('my-citas-list');
+  if(!patientName){c.innerHTML='<div class="empty"><div class="empty-icon">📋</div><div>Reserva una cita primero</div></div>';return;}
+  const myAppts=appointments.filter(a=>a.name===patientName&&a.status!=='cancelada').sort((a,b)=>a.date.localeCompare(b.date));
+  if(!myAppts.length){c.innerHTML='<div class="empty"><div class="empty-icon">📭</div><div>No tienes citas activas</div></div>';return;}
+  c.innerHTML=myAppts.map(a=>{
+    const dur=getDayDur(a.date);
+    const calLink=makeGCalLink(patientName,a.date,a.time,a.service,dur[a.service]);
+    return`<div class="my-appt ${a.service}">
+      <div class="ma-service ${a.service}">${svcLabel[a.service]}</div>
+      <div class="ma-date">${fmtDateLong(strToDate(a.date))}</div>
+      <div class="ma-time">🕐 ${a.time} — ${m2t(t2m(a.time)+dur[a.service])}</div>
+      <div class="ma-actions">
+        <button class="ma-cancel" onclick="cancelMyAppt(${a.id})">Cancelar</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function cancelMyAppt(id){
+  if(!confirm('¿Cancelar esta cita?'))return;
+  const a=appointments.find(x=>x.id===id);if(a)a.status='cancelada';
+  renderMyCitas();showToast('Cita cancelada');
+}
+
+// ════════════════════════════════
+// UTILS
+// ════════════════════════════════
+function openSheet(id){document.getElementById(id).classList.add('open')}
+function closeSheet(id){document.getElementById(id).classList.remove('open')}
+document.querySelectorAll('.sheet-overlay').forEach(o=>{
+  o.addEventListener('click',e=>{if(e.target===o)o.classList.remove('open')});
+});
+
+let toastT;
+function showToast(msg,type=''){
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.className='toast show'+(type?' '+type:'');
+  clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('show'),3000);
+}
+
+// Auto-redirect to patient portal
+setTimeout(()=>goPatient(), 800);
+
+setInterval(()=>{
+  const today=new Date();today.setHours(0,0,0,0);
+  if(currentDate.getTime()===today.getTime()&&isDayOpen(dateToStr(currentDate)))renderTimeline();
+},60000);
+</script>
+</body>
+</html>
